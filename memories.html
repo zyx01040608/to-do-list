@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>完成回忆 · 日子有你</title>
+  <link rel="stylesheet" href="./detail.css">
+</head>
+<body>
+  <main class="detail-page">
+    <header class="detail-topbar">
+      <a class="brand-link" href="./index.html" aria-label="回到主页">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.4-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.7A4.7 4.7 0 0 1 12 6.5a4.7 4.7 0 0 1 8.8 2.2Z"></path></svg></span>
+        <span class="brand-name">日子有你</span>
+      </a>
+      <div class="topbar-actions">
+        <button class="topbar-button sync-state" id="syncState" type="button" aria-label="云端同步状态" title="正在连接云端" hidden><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 8.7 4.7 4.7 0 0 0 7 18Z"></path><path d="m9 13 2 2 4-5"></path></svg></button>
+        <button class="topbar-button" id="signOutButton" type="button" aria-label="退出登录" title="退出登录" hidden><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5"></path><path d="M13 8l4 4-4 4M8 12h9"></path></svg></button>
+        <button class="theme-button" id="themeToggle" type="button" aria-label="切换配色主题" title="切换配色主题"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+      </div>
+    </header>
+
+    <a class="back-link" href="./index.html"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg><span>回到主页</span></a>
+    <section class="detail-hero" aria-labelledby="pageTitle">
+      <div><h1 id="pageTitle">完成回忆</h1><p id="heroSummary">每一件完成的小事，都值得被记住。</p></div>
+    </section>
+
+    <section class="stats-row" aria-label="完成回忆统计">
+      <article class="stat-card"><p class="stat-value" id="totalCount">0</p><p class="stat-label">件共同完成</p></article>
+      <article class="stat-card"><p class="stat-value" id="monthCount">0</p><p class="stat-label">本月完成</p></article>
+      <article class="stat-card"><p class="stat-value" id="noteCount">0</p><p class="stat-label">写下感悟</p></article>
+    </section>
+
+    <div class="section-heading"><h2>一起走过的每一步</h2><p id="updatedHint"></p></div>
+    <section class="memory-grid" id="memoryGrid" aria-live="polite"></section>
+  </main>
+
+  <section class="auth-gate" id="authGate" aria-labelledby="authTitle" aria-modal="true" role="dialog">
+    <div class="auth-card">
+      <span class="auth-heart" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.4-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.7A4.7 4.7 0 0 1 12 6.5a4.7 4.7 0 0 1 8.8 2.2Z"></path></svg></span>
+      <h2 class="auth-title" id="authTitle">回到我们的日子</h2>
+      <form class="auth-form" id="authForm"><input class="auth-input" id="passwordInput" type="password" autocomplete="current-password" placeholder="输入你们的共享密码" required><button class="auth-button" id="authButton" type="submit">进入我们的空间</button></form>
+      <p class="auth-message" id="authMessage" aria-live="polite"></p>
+    </div>
+  </section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./page-data.js"></script>
+  <script>
+    (function () {
+      var elements = {
+        authGate: document.getElementById("authGate"), authForm: document.getElementById("authForm"), passwordInput: document.getElementById("passwordInput"), authButton: document.getElementById("authButton"), authMessage: document.getElementById("authMessage"), syncState: document.getElementById("syncState"), signOutButton: document.getElementById("signOutButton")
+      };
+      var api = window.TwoPersonPages.init({ elements: elements, channelName: "memories", onData: render, onError: showToast });
+      var current = { memories: [], state: api.state };
+      var toast = document.getElementById("toast");
+      var toastTimer = null;
+
+      document.getElementById("themeToggle").addEventListener("click", function () { current.state.theme = current.state.theme === "pink" ? "blue" : "pink"; api.persist(); renderTheme(); });
+
+      function renderTheme() { document.body.classList.toggle("theme-blue", current.state.theme === "blue"); }
+      function render(payload) {
+        current = payload;
+        current.memories = (payload.memories || []).slice().filter(function (entry) { return entry && entry.text; }).sort(function (a, b) { return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime(); });
+        renderTheme();
+        renderStats();
+        renderCards();
+      }
+      function renderStats() {
+        var memories = current.memories;
+        var now = new Date();
+        var monthCount = memories.filter(function (entry) { var date = new Date(entry.completedAt); return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth(); }).length;
+        var noteCount = memories.filter(function (entry) { return !!(entry.note || "").trim(); }).length;
+        document.getElementById("totalCount").textContent = memories.length;
+        document.getElementById("monthCount").textContent = monthCount;
+        document.getElementById("noteCount").textContent = noteCount;
+        document.getElementById("heroSummary").textContent = memories.length ? "每一件完成的小事，都在悄悄把日子过好。" : "每一件完成的小事，都值得被记住。";
+      }
+      function renderCards() {
+        var grid = document.getElementById("memoryGrid");
+        grid.innerHTML = "";
+        if (!current.memories.length) { grid.innerHTML = '<div class="empty-state">还没有完成回忆。完成一件小事后，它会来到这里。</div>'; return; }
+        current.memories.forEach(function (entry) {
+          var days = api.dateDifference(entry.completedAt);
+          var card = document.createElement("article");
+          card.className = "memory-card";
+          card.innerHTML = '<div class="card-topline"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12 4.2 4.2L19 6.5"></path></svg></span><div class="card-actions"><button class="icon-button recall-button" type="button" aria-label="撤回为待办" title="撤回为待办"><svg viewBox="0 0 24 24"><path d="M9 8H5v-4"></path><path d="M5 8c1.8-2.7 4.5-4 8-4 4.4 0 8 3.6 8 8s-3.6 8-8 8c-2.4 0-4.7-.9-6.3-2.6"></path></svg></button><button class="icon-button delete-button" type="button" aria-label="删除回忆" title="删除回忆"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 11h6l1-11"></path><path d="M10 11v4M14 11v4"></path></svg></button></div></div><p class="memory-date"></p><p class="memory-days"></p><h3 class="memory-task"></h3><p class="memory-note"></p>';
+          card.querySelector(".memory-date").textContent = api.formatDateTime(entry.completedAt);
+          card.querySelector(".memory-days").textContent = days > 0 ? "距今 " + days + " 天完成" : days === 0 ? "今天完成" : "刚刚完成";
+          card.querySelector(".memory-task").textContent = entry.text;
+          var note = card.querySelector(".memory-note");
+          note.textContent = entry.note ? entry.note : "还没有写下感悟";
+          note.classList.toggle("is-empty", !entry.note);
+          card.querySelector(".recall-button").addEventListener("click", function () { recallMemory(entry); });
+          card.querySelector(".delete-button").addEventListener("click", function () { removeMemory(entry); });
+          grid.appendChild(card);
+        });
+      }
+      function recallMemory(entry) {
+        if (!window.confirm("把这件事撤回到待办吗？")) return;
+        var restoredAt = new Date().toISOString();
+        current.memories = current.memories.filter(function (item) { return item.id !== entry.id; });
+        current.state.journal = current.state.journal.filter(function (item) { return item.id !== entry.id; });
+        current.state.todos.push({ id: entry.id, text: entry.text, note: entry.note || "", createdAt: entry.createdAt, restoredAt: restoredAt });
+        api.persist(); render(current);
+        if (api.cloud.client && api.cloud.user) api.write(api.cloud.client.from("todos").update({ status: "pending", restored_at: restoredAt, completed_at: null }).eq("id", entry.id));
+      }
+      function removeMemory(entry) {
+        if (!window.confirm("这条回忆会被删除，确定吗？")) return;
+        current.memories = current.memories.filter(function (item) { return item.id !== entry.id; });
+        current.state.journal = current.state.journal.filter(function (item) { return item.id !== entry.id; });
+        api.persist(); render(current);
+        if (api.cloud.client && api.cloud.user) api.write(api.cloud.client.from("todos").delete().eq("id", entry.id));
+      }
+      function showToast(message) { toast.textContent = message; toast.classList.add("is-open"); if (toastTimer) clearTimeout(toastTimer); toastTimer = window.setTimeout(function () { toast.classList.remove("is-open"); }, 2600); }
+      api.start();
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>纪念日 · 日子有你</title>
+  <link rel="stylesheet" href="./detail.css">
+</head>
+<body>
+  <main class="detail-page">
+    <header class="detail-topbar">
+      <a class="brand-link" href="./index.html" aria-label="回到主页">
+        <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.4-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.7A4.7 4.7 0 0 1 12 6.5a4.7 4.7 0 0 1 8.8 2.2Z"></path></svg></span>
+        <span class="brand-name">日子有你</span>
+      </a>
+      <div class="topbar-actions">
+        <button class="topbar-button sync-state" id="syncState" type="button" aria-label="云端同步状态" title="正在连接云端" hidden><svg viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 0 0 .6-8A6 6 0 0 0 6.2 8.7 4.7 4.7 0 0 0 7 18Z"></path><path d="m9 13 2 2 4-5"></path></svg></button>
+        <button class="topbar-button" id="signOutButton" type="button" aria-label="退出登录" title="退出登录" hidden><svg viewBox="0 0 24 24"><path d="M10 5H5v14h5"></path><path d="M13 8l4 4-4 4M8 12h9"></path></svg></button>
+        <button class="theme-button" id="themeToggle" type="button" aria-label="切换配色主题" title="切换配色主题"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path></svg></button>
+      </div>
+    </header>
+
+    <a class="back-link" href="./index.html"><svg viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"></path></svg><span>回到主页</span></a>
+    <section class="detail-hero" aria-labelledby="pageTitle">
+      <div><h1 id="pageTitle">纪念日</h1><p id="heroSummary">把值得记住的日期，好好收藏。</p></div>
+      <button class="primary-button" id="newAnniversaryButton" type="button"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"></path></svg><span>新建纪念日</span></button>
+    </section>
+
+    <section class="stats-row" aria-label="纪念日统计">
+      <article class="stat-card"><p class="stat-value" id="totalCount">0</p><p class="stat-label">个重要日期</p></article>
+      <article class="stat-card"><p class="stat-value" id="longestCount">0</p><p class="stat-label">最长相伴天数</p></article>
+      <article class="stat-card"><p class="stat-value" id="nextCount">—</p><p class="stat-label">下一个倒数</p></article>
+    </section>
+
+    <div class="section-heading"><h2>我们记下的日子</h2><p id="updatedHint"></p></div>
+    <section class="anniversary-grid" id="anniversaryGrid" aria-live="polite"></section>
+  </main>
+
+  <section class="modal" id="anniversaryModal" aria-labelledby="dialogTitle" aria-modal="true" role="dialog">
+    <form class="modal-dialog modal-form" id="anniversaryForm">
+      <div class="modal-head"><h2 id="dialogTitle">新建纪念日</h2><button class="modal-close" id="closeModalButton" type="button" aria-label="关闭">×</button></div>
+      <label class="field-label">纪念日名称<input class="field" id="anniversaryTitleInput" type="text" maxlength="40" placeholder="例如：第一次见面" required></label>
+      <label class="field-label">日期<input class="field" id="anniversaryDateInput" type="date" required></label>
+      <div class="modal-actions"><button class="secondary-button" id="cancelModalButton" type="button">取消</button><button class="primary-button" type="submit">保存纪念日</button></div>
+    </form>
+  </section>
+
+  <section class="auth-gate" id="authGate" aria-labelledby="authTitle" aria-modal="true" role="dialog">
+    <div class="auth-card">
+      <span class="auth-heart" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.4-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.7A4.7 4.7 0 0 1 12 6.5a4.7 4.7 0 0 1 8.8 2.2Z"></path></svg></span>
+      <h2 class="auth-title" id="authTitle">回到我们的日子</h2>
+      <form class="auth-form" id="authForm"><input class="auth-input" id="passwordInput" type="password" autocomplete="current-password" placeholder="输入你们的共享密码" required><button class="auth-button" id="authButton" type="submit">进入我们的空间</button></form>
+      <p class="auth-message" id="authMessage" aria-live="polite"></p>
+    </div>
+  </section>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="./config.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="./page-data.js"></script>
+  <script>
+    (function () {
+      var elements = {
+        authGate: document.getElementById("authGate"), authForm: document.getElementById("authForm"), passwordInput: document.getElementById("passwordInput"), authButton: document.getElementById("authButton"), authMessage: document.getElementById("authMessage"), syncState: document.getElementById("syncState"), signOutButton: document.getElementById("signOutButton")
+      };
+      var api = window.TwoPersonPages.init({ elements: elements, channelName: "anniversaries", onData: render, onReady: function () { renderTheme(); }, onError: showToast });
+      var current = { anniversaries: [], state: api.state };
+      var editingId = null;
+      var modal = document.getElementById("anniversaryModal");
+      var form = document.getElementById("anniversaryForm");
+      var titleInput = document.getElementById("anniversaryTitleInput");
+      var dateInput = document.getElementById("anniversaryDateInput");
+      var toast = document.getElementById("toast");
+      var toastTimer = null;
+
+      document.getElementById("themeToggle").addEventListener("click", function () { current.state.theme = current.state.theme === "pink" ? "blue" : "pink"; api.persist(); renderTheme(); });
+      document.getElementById("newAnniversaryButton").addEventListener("click", function () { openModal(); });
+      document.getElementById("closeModalButton").addEventListener("click", closeModal);
+      document.getElementById("cancelModalButton").addEventListener("click", closeModal);
+      modal.addEventListener("click", function (event) { if (event.target === modal) closeModal(); });
+      form.addEventListener("submit", saveAnniversary);
+
+      function renderTheme() { document.body.classList.toggle("theme-blue", current.state.theme === "blue"); }
+      function render(payload) {
+        current = payload;
+        current.anniversaries = (payload.anniversaries || []).slice().sort(function (a, b) { return new Date(a.date).getTime() - new Date(b.date).getTime(); });
+        renderTheme();
+        renderStats();
+        renderCards();
+      }
+      function renderStats() {
+        var items = current.anniversaries;
+        var longest = 0;
+        var next = null;
+        items.forEach(function (item) {
+          var diff = api.dateDifference(item.date);
+          if (diff >= 0) longest = Math.max(longest, diff + 1);
+          if (diff < 0 && (next === null || diff > next)) next = diff;
+        });
+        document.getElementById("totalCount").textContent = items.length;
+        document.getElementById("longestCount").textContent = longest ? longest : "—";
+        document.getElementById("nextCount").textContent = next === null ? "—" : Math.abs(next) + "天";
+        document.getElementById("heroSummary").textContent = items.length ? "每一个重要日期，都有你们的故事。" : "把值得记住的日期，好好收藏。";
+      }
+      function renderCards() {
+        var grid = document.getElementById("anniversaryGrid");
+        grid.innerHTML = "";
+        if (!current.anniversaries.length) { grid.innerHTML = '<div class="empty-state">还没有纪念日，先记录一个属于你们的日期吧。</div>'; return; }
+        current.anniversaries.forEach(function (item) {
+          var diff = api.dateDifference(item.date);
+          var card = document.createElement("article");
+          card.className = "anniversary-card" + (diff < 0 ? " future" : "");
+          card.innerHTML = '<div class="card-topline"><span class="card-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M20.8 8.7c0 5.4-8.8 10.2-8.8 10.2S3.2 14.1 3.2 8.7A4.7 4.7 0 0 1 12 6.5a4.7 4.7 0 0 1 8.8 2.2Z"></path></svg></span><div class="card-actions"><button class="icon-button edit-button" type="button" aria-label="编辑纪念日" title="编辑纪念日"><svg viewBox="0 0 24 24"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4Z"></path></svg></button><button class="icon-button delete-button" type="button" aria-label="删除纪念日" title="删除纪念日"><svg viewBox="0 0 24 24"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 11h6l1-11"></path><path d="M10 11v4M14 11v4"></path></svg></button></div></div><h3 class="card-title"></h3><p class="card-date"></p><p class="days-number"></p><p class="days-copy"></p><div class="card-divider"></div><div class="card-foot"><span>日子有你</span><span class="card-status"></span></div>';
+          card.querySelector(".card-title").textContent = item.title;
+          card.querySelector(".card-date").textContent = api.formatDateLabel(item.date);
+          card.querySelector(".days-number").textContent = diff >= 0 ? (diff + 1) + " 天" : Math.abs(diff) + " 天";
+          card.querySelector(".days-copy").textContent = diff > 0 ? "已经相伴" : diff === 0 ? "就是今天" : "距离这个日子还有";
+          card.querySelector(".card-status").textContent = diff >= 0 ? "正在发生" : "即将到来";
+          card.querySelector(".edit-button").addEventListener("click", function () { openModal(item); });
+          card.querySelector(".delete-button").addEventListener("click", function () { removeAnniversary(item); });
+          grid.appendChild(card);
+        });
+      }
+      function openModal(item) { editingId = item ? item.id : null; titleInput.value = item ? item.title : ""; dateInput.value = item ? item.date : ""; document.getElementById("dialogTitle").textContent = item ? "编辑纪念日" : "新建纪念日"; modal.classList.add("is-open"); window.setTimeout(function () { titleInput.focus(); }, 0); }
+      function closeModal() { modal.classList.remove("is-open"); editingId = null; form.reset(); }
+      function saveAnniversary(event) {
+        event.preventDefault();
+        var title = titleInput.value.trim();
+        var date = dateInput.value;
+        if (!title || !window.TwoPersonPages.isDateKey(date)) return;
+        var item = { id: editingId || api.createId(), title: title, date: date };
+        var existing = current.anniversaries.find(function (entry) { return entry.id === item.id; });
+        if (existing) {
+          existing.title = title;
+          existing.date = date;
+          var localExisting = current.state.anniversaries.find(function (entry) { return entry.id === item.id; });
+          if (localExisting) { localExisting.title = title; localExisting.date = date; }
+        }
+        else { current.anniversaries.push(item); current.state.anniversaries.push(item); current.state.pendingAnniversaryIds = current.state.pendingAnniversaryIds || []; if (current.state.pendingAnniversaryIds.indexOf(item.id) === -1) current.state.pendingAnniversaryIds.push(item.id); }
+        api.persist(); render(current); closeModal();
+        if (api.cloud.client && api.cloud.user) api.write(existing ? api.cloud.client.from("anniversaries").update({ title: title, anniversary_date: date }).eq("id", item.id) : api.cloud.client.from("anniversaries").insert({ id: item.id, title: title, anniversary_date: date }));
+      }
+      function removeAnniversary(item) {
+        if (!window.confirm("要删除这段纪念日吗？")) return;
+        current.anniversaries = current.anniversaries.filter(function (entry) { return entry.id !== item.id; });
+        current.state.anniversaries = current.state.anniversaries.filter(function (entry) { return entry.id !== item.id; });
+        current.state.pendingAnniversaryIds = (current.state.pendingAnniversaryIds || []).filter(function (id) { return id !== item.id; });
+        api.persist(); render(current);
+        if (api.cloud.client && api.cloud.user) api.write(api.cloud.client.from("anniversaries").delete().eq("id", item.id));
+      }
+      function showToast(message) { toast.textContent = message; toast.classList.add("is-open"); if (toastTimer) clearTimeout(toastTimer); toastTimer = window.setTimeout(function () { toast.classList.remove("is-open"); }, 2600); }
+      api.start();
+    })();
+  </script>
+</body>
+</html>

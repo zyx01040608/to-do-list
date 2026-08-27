@@ -1,6 +1,14 @@
 # 日子有你
 
-一个只供两个人使用的共享待办、完成回忆和纪念日页面。前端部署在 GitHub Pages，数据由 Supabase 保存；未配置 Supabase 时仍使用当前浏览器的 `localStorage`。
+一个只供两个人使用的共享待办、完成回忆和纪念日页面。主页完整展示待办，并精选显示纪念日与完成回忆；点击后可进入独立的卡片详情页查看完整记录和距今天数。前端部署在 GitHub Pages，数据由 Supabase 保存；未配置 Supabase 时仍使用当前浏览器的 `localStorage`。
+
+页面入口：
+
+- [`index.html`](index.html)：主页，完整待办 + 纪念日/回忆精选预览。
+- [`anniversaries.html`](anniversaries.html)：纪念日卡片详情，支持新建、编辑、删除和未来日期倒数。
+- [`memories.html`](memories.html)：完成回忆卡片详情，显示完成时间、距今天数和感悟，可撤回或删除。
+
+详情页的布局参考了开源项目常见的时间线/倒数卡片模式，例如 [amrohan/timeline](https://github.com/amrohan/timeline) 的事件卡片和 [funnyzak/love-page](https://github.com/funnyzak/love-page) 的纪念日倒数表达；项目代码和样式为本项目重新实现。
 
 ## 接入 Supabase
 
