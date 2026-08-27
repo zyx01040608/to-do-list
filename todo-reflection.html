@@ -1,0 +1,1630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>待办事项与感悟日记</title>
+  <style>
+    :root {
+      --bg: #fffdfd;
+      --bg-soft: #fff5f7;
+      --bg-accent: rgba(245, 184, 202, 0.16);
+      --panel: rgba(255, 255, 255, 0.93);
+      --panel-strong: #ffffff;
+      --text: #2d3440;
+      --text-soft: #556072;
+      --muted: #8b94a2;
+      --line: rgba(229, 198, 209, 0.8);
+      --line-soft: rgba(218, 191, 201, 0.34);
+      --accent: #f4b8ca;
+      --accent-strong: #eb90af;
+      --accent-deep: #c56182;
+      --accent-soft: rgba(244, 184, 202, 0.2);
+      --shadow: 0 24px 54px rgba(232, 171, 193, 0.18);
+      --shadow-strong: 0 18px 34px rgba(90, 102, 123, 0.12);
+      --icon-bg: rgba(244, 184, 202, 0.14);
+      --tooltip-bg: rgba(49, 58, 72, 0.9);
+      --badge: "粉白主题";
+    }
+
+    body.theme-blue {
+      --bg: #fcfeff;
+      --bg-soft: #eef7ff;
+      --bg-accent: rgba(168, 212, 248, 0.18);
+      --panel: rgba(255, 255, 255, 0.94);
+      --panel-strong: #ffffff;
+      --text: #293544;
+      --text-soft: #516174;
+      --muted: #8793a3;
+      --line: rgba(180, 209, 236, 0.85);
+      --line-soft: rgba(175, 205, 229, 0.34);
+      --accent: #a7d3f7;
+      --accent-strong: #68ace6;
+      --accent-deep: #2d76aa;
+      --accent-soft: rgba(168, 212, 248, 0.2);
+      --shadow: 0 24px 54px rgba(121, 174, 224, 0.16);
+      --shadow-strong: 0 18px 34px rgba(74, 102, 134, 0.14);
+      --icon-bg: rgba(168, 212, 248, 0.15);
+      --tooltip-bg: rgba(39, 59, 83, 0.92);
+      --badge: "蓝白主题";
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      min-height: 100%;
+    }
+
+    body {
+      font-family: "Segoe UI Variable", "Trebuchet MS", "PingFang SC", "Microsoft YaHei", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, var(--bg-accent), transparent 30%),
+        radial-gradient(circle at top right, rgba(255, 255, 255, 0.9), transparent 28%),
+        linear-gradient(180deg, var(--bg-soft) 0%, var(--bg) 28%, #ffffff 100%);
+      transition: background 0.35s ease, color 0.35s ease;
+    }
+
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .page {
+      width: min(980px, calc(100vw - 40px));
+      margin: 0 auto;
+      padding: 28px 0 60px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(12px);
+      transition: background 0.35s ease, border-color 0.35s ease, box-shadow 0.35s ease;
+    }
+
+    .calendar-card {
+      padding: 22px 24px 20px;
+      margin-bottom: 22px;
+    }
+
+    .calendar-topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .today-meta {
+      min-width: 0;
+    }
+
+    .today-caption {
+      margin: 0 0 4px;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .today-date {
+      margin: 0;
+      font-size: clamp(20px, 3vw, 26px);
+      letter-spacing: 0.02em;
+    }
+
+    .topbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .theme-switch,
+    .ghost-button,
+    .nav-button,
+    .add-button {
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--text-soft);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.24s ease, border-color 0.24s ease, background 0.24s ease, color 0.24s ease, opacity 0.2s ease;
+    }
+
+    .theme-switch,
+    .ghost-button {
+      border-radius: 999px;
+      padding: 10px 16px;
+      box-shadow: 0 10px 22px rgba(67, 80, 99, 0.08);
+    }
+
+    .theme-switch::after {
+      content: " · " var(--badge);
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .theme-switch:hover,
+    .ghost-button:hover,
+    .nav-button:hover,
+    .add-button:hover,
+    .theme-switch:focus-visible,
+    .ghost-button:focus-visible,
+    .nav-button:focus-visible,
+    .add-button:focus-visible,
+    .icon-button:hover,
+    .icon-button:focus-visible,
+    .confirm-button:hover,
+    .confirm-button:focus-visible {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-strong);
+      outline: none;
+    }
+
+    .calendar-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .calendar-month-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .nav-button {
+      width: 40px;
+      height: 40px;
+      border-radius: 14px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 10px 22px rgba(67, 80, 99, 0.08);
+    }
+
+    .nav-icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .calendar-month {
+      min-width: 160px;
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .calendar-hint {
+      margin: 0;
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+      line-height: 1.7;
+    }
+
+    .calendar-grid-wrap {
+      position: relative;
+      overflow: hidden;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.65));
+      border: 1px solid var(--line-soft);
+      padding: 12px;
+      min-height: 336px;
+    }
+
+    .calendar-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+      opacity: 1;
+      transform: translateX(0);
+      transition: opacity 0.22s ease, transform 0.24s ease;
+    }
+
+    .calendar-grid.is-shifting {
+      opacity: 0;
+      transform: translateX(var(--shift-direction, 0));
+    }
+
+    .weekday {
+      padding: 6px 0 10px;
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .day-button {
+      position: relative;
+      min-height: 70px;
+      padding: 10px 10px 12px;
+      border: 1px solid transparent;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.72);
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.22s ease, background 0.22s ease, box-shadow 0.22s ease, color 0.22s ease;
+    }
+
+    .day-button:hover,
+    .day-button:focus-visible {
+      border-color: var(--accent);
+      background: rgba(255, 255, 255, 0.96);
+      box-shadow: 0 14px 26px rgba(92, 109, 134, 0.1);
+      outline: none;
+    }
+
+    .day-button.is-other-month {
+      color: #b3bbc6;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .day-button.is-today {
+      border-color: var(--accent-strong);
+      box-shadow: inset 0 0 0 1px var(--accent-strong);
+    }
+
+    .day-button.is-selected {
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #ffffff;
+      box-shadow: 0 18px 30px rgba(101, 127, 157, 0.16);
+    }
+
+    .day-button.is-selected .day-dot {
+      background: rgba(255, 255, 255, 0.95);
+    }
+
+    .day-button.is-selected.is-today {
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.88), 0 18px 30px rgba(101, 127, 157, 0.16);
+    }
+
+    .day-number {
+      display: block;
+      font-size: 15px;
+      line-height: 1.2;
+    }
+
+    .day-dot {
+      position: absolute;
+      left: 12px;
+      bottom: 11px;
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: var(--accent-deep);
+      opacity: 0;
+      transform: scale(0.7);
+      transition: opacity 0.22s ease, transform 0.22s ease, background 0.22s ease;
+    }
+
+    .day-button.has-data .day-dot {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .hero {
+      padding: 30px;
+      margin-bottom: 22px;
+    }
+
+    .hero-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .title {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1.05;
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin: 0;
+      font-size: 15px;
+      color: var(--muted);
+      line-height: 1.75;
+      max-width: 620px;
+    }
+
+    .filter-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: var(--accent-soft);
+      color: var(--accent-deep);
+      white-space: nowrap;
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    .filter-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent-deep);
+    }
+
+    .composer {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+    }
+
+    .todo-input,
+    .reflection-input {
+      width: 100%;
+      border-radius: 18px;
+      border: 1px solid transparent;
+      background: var(--panel-strong);
+      color: var(--text);
+      transition: border-color 0.22s ease, box-shadow 0.22s ease, background 0.22s ease;
+    }
+
+    .todo-input {
+      min-height: 58px;
+      padding: 0 18px;
+      box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
+    }
+
+    .todo-input::placeholder,
+    .reflection-input::placeholder {
+      color: #a7afbc;
+    }
+
+    .todo-input:hover,
+    .todo-input:focus,
+    .reflection-input:hover,
+    .reflection-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+      outline: none;
+    }
+
+    .add-button {
+      min-width: 124px;
+      padding: 0 20px;
+      border-radius: 18px;
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #ffffff;
+      box-shadow: 0 18px 30px rgba(104, 128, 160, 0.18);
+    }
+
+    .section {
+      padding: 28px 30px;
+      margin-bottom: 22px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .section-title {
+      margin: 0;
+      font-size: 20px;
+    }
+
+    .section-note {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+    }
+
+    .content-fade {
+      opacity: 1;
+      transform: translateY(0);
+      transition: opacity 0.26s ease, transform 0.26s ease;
+    }
+
+    .content-fade.is-transitioning {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    .todo-list,
+    .journal-list {
+      display: grid;
+      gap: 16px;
+    }
+
+    .empty {
+      padding: 26px 18px;
+      border-radius: 22px;
+      border: 1px dashed var(--line);
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.74), rgba(255, 255, 255, 0.54));
+      color: var(--muted);
+      text-align: center;
+      line-height: 1.8;
+    }
+
+    .todo-card,
+    .journal-entry {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: var(--panel-strong);
+      transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease, opacity 0.28s ease;
+    }
+
+    .todo-card {
+      padding: 18px 18px 16px;
+      cursor: pointer;
+      overflow: visible;
+    }
+
+    .todo-card:hover,
+    .journal-entry:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 32px rgba(89, 106, 132, 0.09);
+      border-color: var(--accent);
+    }
+
+    .todo-card.is-exiting,
+    .journal-entry.is-exiting {
+      opacity: 0;
+      transform: scale(0.985) translateY(-10px);
+      pointer-events: none;
+    }
+
+    .todo-main,
+    .journal-main {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+    }
+
+    .todo-text-wrap,
+    .journal-text-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .todo-text,
+    .journal-task {
+      margin: 0 0 8px;
+      font-size: 17px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .todo-time,
+    .journal-meta {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.8;
+    }
+
+    .journal-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+    }
+
+    .action-row {
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-cluster {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .action-hint {
+      color: var(--muted);
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .action-anchor {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .icon-button {
+      position: relative;
+      width: 40px;
+      height: 40px;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      background: var(--icon-bg);
+      color: var(--accent-deep);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.24s ease, background 0.24s ease, color 0.24s ease, border-color 0.24s ease;
+    }
+
+    .icon-button:hover,
+    .icon-button:focus-visible {
+      background: var(--panel-strong);
+      border-color: var(--line);
+      outline: none;
+    }
+
+    .icon-button svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    .action-anchor[data-tip]:hover::after,
+    .action-anchor[data-tip]:focus-within::after {
+      content: attr(data-tip);
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      padding: 6px 10px;
+      border-radius: 10px;
+      background: var(--tooltip-bg);
+      color: #ffffff;
+      font-size: 12px;
+      line-height: 1;
+      white-space: nowrap;
+      box-shadow: 0 12px 26px rgba(33, 42, 54, 0.18);
+      z-index: 8;
+    }
+
+    .confirm-pop {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      z-index: 12;
+      min-width: 170px;
+      padding: 12px;
+      border-radius: 16px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      box-shadow: 0 18px 36px rgba(42, 53, 68, 0.14);
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .confirm-pop.is-open {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .confirm-text {
+      margin: 0 0 10px;
+      font-size: 13px;
+      color: var(--text-soft);
+      line-height: 1.5;
+    }
+
+    .confirm-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    }
+
+    .confirm-button {
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel-strong);
+      color: var(--text-soft);
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.24s ease, background 0.24s ease, color 0.24s ease, border-color 0.24s ease;
+    }
+
+    .confirm-button.is-primary {
+      border-color: transparent;
+      background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+      color: #ffffff;
+    }
+
+    .note-panel {
+      max-height: 0;
+      opacity: 0;
+      overflow: hidden;
+      margin-top: 0;
+      transition: max-height 0.28s ease, opacity 0.22s ease, margin-top 0.28s ease;
+    }
+
+    .note-panel.is-open {
+      max-height: 240px;
+      opacity: 1;
+      margin-top: 16px;
+    }
+
+    .reflection-input {
+      min-height: 120px;
+      padding: 14px 16px;
+      line-height: 1.75;
+      resize: vertical;
+      border-color: var(--line);
+    }
+
+    .journal-group {
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0.84));
+      padding: 20px;
+    }
+
+    .journal-date {
+      margin: 0 0 14px;
+      font-size: 18px;
+      color: var(--accent-deep);
+    }
+
+    .journal-group .journal-entry + .journal-entry {
+      margin-top: 12px;
+    }
+
+    .journal-entry {
+      padding: 16px;
+      overflow: visible;
+    }
+
+    .journal-reflection {
+      margin: 0 0 12px;
+      padding: 14px 16px;
+      border-radius: 16px;
+      background: var(--bg-soft);
+      color: var(--text-soft);
+      line-height: 1.82;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .journal-reflection.is-empty {
+      color: #9aa4b1;
+      font-style: italic;
+    }
+
+    @media (max-width: 840px) {
+      .page {
+        width: min(100vw - 24px, 980px);
+      }
+
+      .calendar-topbar,
+      .calendar-head,
+      .hero-header,
+      .section-head,
+      .todo-main,
+      .journal-main {
+        display: block;
+      }
+
+      .calendar-topbar > * + *,
+      .calendar-head > * + *,
+      .hero-header > * + *,
+      .section-head > * + *,
+      .todo-main > * + *,
+      .journal-main > * + * {
+        margin-top: 14px;
+      }
+
+      .topbar-actions {
+        justify-content: flex-start;
+      }
+
+      .calendar-hint,
+      .section-note {
+        text-align: left;
+      }
+
+      .composer {
+        grid-template-columns: 1fr;
+      }
+
+      .theme-switch,
+      .ghost-button,
+      .add-button {
+        width: 100%;
+      }
+
+      .action-row {
+        justify-content: space-between;
+      }
+    }
+
+    @media (max-width: 620px) {
+      .calendar-grid-wrap {
+        min-height: 300px;
+        padding: 10px;
+      }
+
+      .calendar-grid {
+        gap: 6px;
+      }
+
+      .day-button {
+        min-height: 58px;
+        padding: 8px 8px 10px;
+        border-radius: 16px;
+      }
+
+      .calendar-month {
+        min-width: 0;
+      }
+
+      .action-cluster {
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="panel calendar-card">
+      <div class="calendar-topbar">
+        <div class="today-meta">
+          <p class="today-caption">今天</p>
+          <p class="today-date" id="todayText"></p>
+        </div>
+        <div class="topbar-actions">
+          <button class="ghost-button" id="clearFilterButton" type="button">查看全部</button>
+          <button class="theme-switch" id="themeToggle" type="button">切换主题</button>
+        </div>
+      </div>
+      <div class="calendar-head">
+        <div class="calendar-month-wrap">
+          <button class="nav-button" id="prevMonthButton" type="button" aria-label="上一月">
+            <span class="nav-icon">‹</span>
+          </button>
+          <h2 class="calendar-month" id="calendarMonthLabel"></h2>
+          <button class="nav-button" id="nextMonthButton" type="button" aria-label="下一月">
+            <span class="nav-icon">›</span>
+          </button>
+        </div>
+        <p class="calendar-hint" id="calendarHint">点击任意日期筛选对应待办与感悟记录</p>
+      </div>
+      <div class="calendar-grid-wrap">
+        <div class="calendar-grid" id="calendarGrid"></div>
+      </div>
+    </section>
+
+    <section class="panel hero">
+      <div class="hero-header">
+        <div>
+          <h1 class="title">待办事项 + 感悟记录</h1>
+          <p class="subtitle">点击待办卡片主体即可完成并归档；右侧图标用于写感悟、删除、撤回等精细操作。</p>
+        </div>
+        <div class="filter-badge" id="filterBadge">
+          <span class="filter-dot"></span>
+          <span id="filterText">当前展示全部内容</span>
+        </div>
+      </div>
+      <div class="composer">
+        <input id="todoInput" class="todo-input" type="text" maxlength="300" placeholder="输入今天想完成的事项，回车可直接添加">
+        <button id="addButton" class="add-button" type="button">添加待办</button>
+      </div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2 class="section-title">待办列表</h2>
+        <div class="section-note" id="todoSectionNote">按创建时间倒序显示</div>
+      </div>
+      <div id="todoList" class="todo-list content-fade"></div>
+    </section>
+
+    <section class="panel section">
+      <div class="section-head">
+        <h2 class="section-title">感悟日记</h2>
+        <div class="section-note" id="journalSectionNote">按完成日期归档，最新内容在最上方</div>
+      </div>
+      <div id="journalList" class="journal-list content-fade"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      var STORAGE_KEY = "todoReflectionSingleFileApp";
+      var WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
+      var EXIT_DELAY = 260;
+      var DEFAULT_STATE = {
+        theme: "pink",
+        todos: [],
+        journal: []
+      };
+
+      var state = loadState();
+      var uiState = {
+        selectedDate: null,
+        calendarMonth: startOfMonth(new Date()).toISOString(),
+        calendarAnimating: false
+      };
+      var openEditors = {};
+      var activeConfirmId = null;
+      var activeConfirmType = null;
+      var activeAnimationTimer = null;
+
+      var todayText = document.getElementById("todayText");
+      var themeToggle = document.getElementById("themeToggle");
+      var clearFilterButton = document.getElementById("clearFilterButton");
+      var prevMonthButton = document.getElementById("prevMonthButton");
+      var nextMonthButton = document.getElementById("nextMonthButton");
+      var calendarMonthLabel = document.getElementById("calendarMonthLabel");
+      var calendarHint = document.getElementById("calendarHint");
+      var calendarGrid = document.getElementById("calendarGrid");
+      var filterText = document.getElementById("filterText");
+      var todoInput = document.getElementById("todoInput");
+      var addButton = document.getElementById("addButton");
+      var todoList = document.getElementById("todoList");
+      var journalList = document.getElementById("journalList");
+      var todoSectionNote = document.getElementById("todoSectionNote");
+      var journalSectionNote = document.getElementById("journalSectionNote");
+
+      normalizeState();
+      applyTheme(state.theme);
+      renderToday();
+      renderAll();
+      todoInput.focus();
+
+      themeToggle.addEventListener("click", function () {
+        state.theme = state.theme === "pink" ? "blue" : "pink";
+        applyTheme(state.theme);
+        persist();
+      });
+
+      clearFilterButton.addEventListener("click", function () {
+        if (!uiState.selectedDate) {
+          return;
+        }
+        uiState.selectedDate = null;
+        renderAllWithFade();
+      });
+
+      prevMonthButton.addEventListener("click", function () {
+        shiftCalendarMonth(-1);
+      });
+
+      nextMonthButton.addEventListener("click", function () {
+        shiftCalendarMonth(1);
+      });
+
+      addButton.addEventListener("click", addTodoFromInput);
+
+      todoInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter" && !event.isComposing) {
+          event.preventDefault();
+          addTodoFromInput();
+        }
+      });
+
+      document.addEventListener("click", function (event) {
+        if (activeConfirmId === null) {
+          return;
+        }
+        if (!event.target.closest(".action-anchor")) {
+          activeConfirmId = null;
+          activeConfirmType = null;
+          renderAll();
+        }
+      });
+
+      setInterval(renderToday, 60000);
+
+      function loadState() {
+        try {
+          var raw = localStorage.getItem(STORAGE_KEY);
+          if (!raw) {
+            return cloneDefaultState();
+          }
+
+          var parsed = JSON.parse(raw);
+          return {
+            theme: parsed.theme === "blue" ? "blue" : "pink",
+            todos: Array.isArray(parsed.todos) ? parsed.todos : [],
+            journal: Array.isArray(parsed.journal) ? parsed.journal : []
+          };
+        } catch (error) {
+          return cloneDefaultState();
+        }
+      }
+
+      function cloneDefaultState() {
+        return {
+          theme: DEFAULT_STATE.theme,
+          todos: [],
+          journal: []
+        };
+      }
+
+      function normalizeState() {
+        state.todos = state.todos.map(function (todo) {
+          return {
+            id: todo.id || createId(),
+            text: typeof todo.text === "string" ? todo.text : "",
+            note: typeof todo.note === "string" ? todo.note : "",
+            createdAt: isValidDate(todo.createdAt) ? todo.createdAt : new Date().toISOString(),
+            restoredAt: isValidDate(todo.restoredAt) ? todo.restoredAt : null
+          };
+        }).filter(function (todo) {
+          return todo.text.trim();
+        });
+
+        state.journal = state.journal.map(function (entry) {
+          return {
+            id: entry.id || createId(),
+            text: typeof entry.text === "string" ? entry.text : "",
+            note: typeof entry.note === "string" ? entry.note : "",
+            createdAt: isValidDate(entry.createdAt) ? entry.createdAt : new Date().toISOString(),
+            completedAt: isValidDate(entry.completedAt) ? entry.completedAt : new Date().toISOString()
+          };
+        }).filter(function (entry) {
+          return entry.text.trim();
+        });
+      }
+
+      function persist() {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function applyTheme(theme) {
+        document.body.classList.toggle("theme-blue", theme === "blue");
+      }
+
+      function renderToday() {
+        var now = new Date();
+        todayText.textContent = formatDateLabel(formatDate(now));
+      }
+
+      function addTodoFromInput() {
+        var text = todoInput.value.trim();
+        var now = new Date().toISOString();
+        if (!text) {
+          todoInput.focus();
+          return;
+        }
+
+        state.todos.push({
+          id: createId(),
+          text: text,
+          note: "",
+          createdAt: now,
+          restoredAt: now
+        });
+
+        sortTodos();
+        persist();
+        renderAllWithFade();
+        todoInput.value = "";
+        todoInput.focus();
+      }
+
+      function createId() {
+        return "item-" + Date.now() + "-" + Math.random().toString(16).slice(2, 8);
+      }
+
+      function isValidDate(value) {
+        return !!value && !Number.isNaN(new Date(value).getTime());
+      }
+
+      function sortTodos() {
+        state.todos.sort(function (a, b) {
+          return new Date(getTodoSortTime(b)).getTime() - new Date(getTodoSortTime(a)).getTime();
+        });
+      }
+
+      function sortJournal() {
+        state.journal.sort(function (a, b) {
+          return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+        });
+      }
+
+      function renderAll() {
+        sortTodos();
+        sortJournal();
+        renderHeaderMeta();
+        renderCalendar();
+        renderTodos();
+        renderJournal();
+      }
+
+      function renderHeaderMeta() {
+        if (uiState.selectedDate) {
+          filterText.textContent = "当前筛选 " + formatDateLabel(uiState.selectedDate);
+          calendarHint.textContent = "已筛选 " + formatDateLabel(uiState.selectedDate) + " 的待办与感悟记录";
+          todoSectionNote.textContent = "仅显示该日期创建且未完成的待办";
+          journalSectionNote.textContent = "仅显示该日期完成的感悟记录";
+        } else {
+          filterText.textContent = "当前展示全部内容";
+          calendarHint.textContent = "点击任意日期筛选对应待办与感悟记录";
+          todoSectionNote.textContent = "按创建时间倒序显示";
+          journalSectionNote.textContent = "按完成日期归档，最新内容在最上方";
+        }
+      }
+
+      function renderCalendar() {
+        calendarMonthLabel.textContent = formatMonthLabel(uiState.calendarMonth);
+        calendarGrid.innerHTML = "";
+
+        WEEKDAYS.forEach(function (weekday) {
+          var header = document.createElement("div");
+          header.className = "weekday";
+          header.textContent = weekday;
+          calendarGrid.appendChild(header);
+        });
+
+        var monthStart = toDate(uiState.calendarMonth);
+        var monthDays = getCalendarDays(monthStart);
+        var dataDates = getDataDateSet();
+        var todayKey = formatDate(new Date());
+
+        monthDays.forEach(function (dayInfo) {
+          var button = document.createElement("button");
+          button.type = "button";
+          button.className = "day-button";
+          button.dataset.date = dayInfo.dateKey;
+
+          if (!dayInfo.isCurrentMonth) {
+            button.classList.add("is-other-month");
+          }
+          if (dayInfo.dateKey === todayKey) {
+            button.classList.add("is-today");
+          }
+          if (uiState.selectedDate === dayInfo.dateKey) {
+            button.classList.add("is-selected");
+          }
+          if (dataDates[dayInfo.dateKey]) {
+            button.classList.add("has-data");
+          }
+
+          button.innerHTML =
+            '<span class="day-number">' + dayInfo.dayNumber + "</span>" +
+            '<span class="day-dot"></span>';
+
+          button.addEventListener("click", function () {
+            uiState.selectedDate = dayInfo.dateKey;
+            renderAllWithFade();
+          });
+
+          calendarGrid.appendChild(button);
+        });
+      }
+
+      function shiftCalendarMonth(offset) {
+        if (uiState.calendarAnimating) {
+          return;
+        }
+
+        uiState.calendarAnimating = true;
+        var direction = offset > 0 ? "18px" : "-18px";
+        calendarGrid.style.setProperty("--shift-direction", direction);
+        calendarGrid.classList.add("is-shifting");
+
+        window.setTimeout(function () {
+          uiState.calendarMonth = addMonths(uiState.calendarMonth, offset).toISOString();
+          renderCalendar();
+          calendarGrid.style.setProperty("--shift-direction", offset > 0 ? "-18px" : "18px");
+          calendarGrid.classList.add("is-shifting");
+          requestAnimationFrame(function () {
+            calendarGrid.classList.remove("is-shifting");
+          });
+          window.setTimeout(function () {
+            uiState.calendarAnimating = false;
+          }, 220);
+        }, 160);
+      }
+
+      function renderTodos() {
+        sortTodos();
+        var todos = getFilteredTodos();
+        todoList.innerHTML = "";
+
+        if (!todos.length) {
+          todoList.appendChild(createEmpty(
+            uiState.selectedDate
+              ? formatDateLabel(uiState.selectedDate) + " 没有未完成待办。"
+              : "还没有待办事项，先写下第一件想完成的事。"
+          ));
+          return;
+        }
+
+        todos.forEach(function (todo) {
+          var card = document.createElement("article");
+          card.className = "todo-card";
+          card.dataset.id = todo.id;
+
+          card.innerHTML =
+            '<div class="todo-main">' +
+              '<div class="todo-text-wrap">' +
+                '<p class="todo-text"></p>' +
+                '<div class="todo-time"></div>' +
+              "</div>" +
+              '<div class="action-row">' +
+                '<span class="action-hint">点击主体完成</span>' +
+                '<div class="action-cluster">' +
+                  '<span class="action-anchor" data-tip="写感悟">' +
+                    '<button type="button" class="icon-button toggle-note" aria-label="写感悟">' + renderIcon("note") + "</button>" +
+                  "</span>" +
+                  '<span class="action-anchor delete-anchor" data-tip="删除待办"></span>' +
+                "</div>" +
+              "</div>" +
+            "</div>" +
+            '<div class="note-panel">' +
+              '<textarea class="reflection-input" rows="4" placeholder="写下这个待办的感悟、计划或收获"></textarea>' +
+            "</div>";
+
+          card.querySelector(".todo-text").textContent = todo.text;
+          card.querySelector(".todo-time").textContent = "创建于 " + formatDateTime(todo.createdAt);
+
+          var noteButton = card.querySelector(".toggle-note");
+          var notePanel = card.querySelector(".note-panel");
+          var textarea = card.querySelector(".reflection-input");
+          var deleteAnchor = card.querySelector(".delete-anchor");
+
+          textarea.value = todo.note || "";
+          notePanel.classList.toggle("is-open", !!openEditors[todo.id]);
+          mountConfirmableAction(deleteAnchor, {
+            label: "删除待办",
+            icon: renderIcon("trash"),
+            confirmText: "删除后不会进入感悟日记，确定继续吗？",
+            isOpen: activeConfirmId === todo.id && activeConfirmType === "todo-delete",
+            onToggle: function (event) {
+              event.stopPropagation();
+              toggleConfirm(todo.id, "todo-delete");
+            },
+            onConfirm: function (event) {
+              event.stopPropagation();
+              removeTodo(todo.id, card);
+            }
+          });
+
+          card.addEventListener("click", function () {
+            completeTodo(todo.id, card);
+          });
+
+          noteButton.addEventListener("click", function (event) {
+            event.stopPropagation();
+            openEditors[todo.id] = !openEditors[todo.id];
+            activeConfirmId = null;
+            activeConfirmType = null;
+            notePanel.classList.toggle("is-open", !!openEditors[todo.id]);
+            if (openEditors[todo.id]) {
+              window.setTimeout(function () {
+                textarea.focus();
+              }, 120);
+            }
+          });
+
+          notePanel.addEventListener("click", stopBubble);
+          textarea.addEventListener("click", stopBubble);
+          textarea.addEventListener("input", function () {
+            updateTodoNote(todo.id, textarea.value);
+          });
+
+          todoList.appendChild(card);
+        });
+      }
+
+      function renderJournal() {
+        sortJournal();
+        journalList.innerHTML = "";
+        var entries = getFilteredJournal();
+
+        if (!entries.length) {
+          journalList.appendChild(createEmpty(
+            uiState.selectedDate
+              ? formatDateLabel(uiState.selectedDate) + " 还没有完成记录。"
+              : "完成待办后，感悟与时间记录会自动归档到这里。"
+          ));
+          return;
+        }
+
+        var groups = groupJournalByDate(entries);
+
+        groups.forEach(function (group) {
+          var wrapper = document.createElement("section");
+          wrapper.className = "journal-group";
+
+          var title = document.createElement("h3");
+          title.className = "journal-date";
+          title.textContent = formatDateLabel(group.dateKey);
+          wrapper.appendChild(title);
+
+          group.items.forEach(function (entry) {
+            var item = document.createElement("article");
+            item.className = "journal-entry";
+            item.dataset.id = entry.id;
+
+            item.innerHTML =
+              '<div class="journal-main">' +
+                '<div class="journal-text-wrap">' +
+                  '<p class="journal-task"></p>' +
+                  '<p class="journal-reflection"></p>' +
+                  '<div class="journal-meta"></div>' +
+                "</div>" +
+                '<div class="action-cluster">' +
+                  '<span class="action-anchor recall-anchor" data-tip="撤回为待办"></span>' +
+                  '<span class="action-anchor delete-anchor" data-tip="删除日记"></span>' +
+                "</div>" +
+              "</div>";
+
+            item.querySelector(".journal-task").textContent = entry.text;
+
+            var reflection = item.querySelector(".journal-reflection");
+            reflection.textContent = entry.note || "未填写感悟";
+            reflection.classList.toggle("is-empty", !entry.note);
+
+            var meta = item.querySelector(".journal-meta");
+            meta.innerHTML =
+              "<span>创建于 " + formatDateTime(entry.createdAt) + "</span>" +
+              "<span>完成于 " + formatDateTime(entry.completedAt) + "</span>";
+
+            mountAction(item.querySelector(".recall-anchor"), {
+              label: "撤回为待办",
+              icon: renderIcon("undo"),
+              onClick: function (event) {
+                event.stopPropagation();
+                recallJournal(entry.id, item);
+              }
+            });
+
+            mountConfirmableAction(item.querySelector(".delete-anchor"), {
+              label: "删除日记",
+              icon: renderIcon("trash"),
+              confirmText: "这条感悟记录会被永久删除，确定继续吗？",
+              isOpen: activeConfirmId === entry.id && activeConfirmType === "journal-delete",
+              onToggle: function (event) {
+                event.stopPropagation();
+                toggleConfirm(entry.id, "journal-delete");
+              },
+              onConfirm: function (event) {
+                event.stopPropagation();
+                removeJournal(entry.id, item);
+              }
+            });
+
+            wrapper.appendChild(item);
+          });
+
+          journalList.appendChild(wrapper);
+        });
+      }
+
+      function mountAction(anchor, config) {
+        anchor.innerHTML =
+          '<button type="button" class="icon-button" aria-label="' + config.label + '">' + config.icon + "</button>";
+
+        anchor.querySelector("button").addEventListener("click", config.onClick);
+      }
+
+      function mountConfirmableAction(anchor, config) {
+        anchor.innerHTML =
+          '<button type="button" class="icon-button" aria-label="' + config.label + '">' + config.icon + "</button>" +
+          '<div class="confirm-pop' + (config.isOpen ? " is-open" : "") + '">' +
+            '<p class="confirm-text">' + config.confirmText + "</p>" +
+            '<div class="confirm-actions">' +
+              '<button type="button" class="confirm-button cancel-button">取消</button>' +
+              '<button type="button" class="confirm-button is-primary confirm-button-main">确认</button>' +
+            "</div>" +
+          "</div>";
+
+        var trigger = anchor.querySelector(".icon-button");
+        var cancelButton = anchor.querySelector(".cancel-button");
+        var confirmButton = anchor.querySelector(".confirm-button-main");
+
+        trigger.addEventListener("click", config.onToggle);
+        cancelButton.addEventListener("click", function (event) {
+          event.stopPropagation();
+          activeConfirmId = null;
+          activeConfirmType = null;
+          renderAll();
+        });
+        confirmButton.addEventListener("click", config.onConfirm);
+      }
+
+      function toggleConfirm(id, type) {
+        if (activeConfirmId === id && activeConfirmType === type) {
+          activeConfirmId = null;
+          activeConfirmType = null;
+        } else {
+          activeConfirmId = id;
+          activeConfirmType = type;
+        }
+        renderAll();
+      }
+
+      function completeTodo(id, card) {
+        var todo = findById(state.todos, id);
+        if (!todo) {
+          return;
+        }
+
+        activeConfirmId = null;
+        activeConfirmType = null;
+
+        transitionOut(card, function () {
+          removeById(state.todos, id);
+          state.journal.push({
+            id: todo.id,
+            text: todo.text,
+            note: todo.note || "",
+            createdAt: todo.createdAt,
+            completedAt: new Date().toISOString()
+          });
+          delete openEditors[id];
+          persist();
+          renderAllWithFade();
+        });
+      }
+
+      function removeTodo(id, card) {
+        activeConfirmId = null;
+        activeConfirmType = null;
+
+        transitionOut(card, function () {
+          removeById(state.todos, id);
+          delete openEditors[id];
+          persist();
+          renderAllWithFade();
+        });
+      }
+
+      function recallJournal(id, element) {
+        var entry = findById(state.journal, id);
+        if (!entry) {
+          return;
+        }
+
+        activeConfirmId = null;
+        activeConfirmType = null;
+
+        transitionOut(element, function () {
+          removeById(state.journal, id);
+          state.todos.push({
+            id: entry.id,
+            text: entry.text,
+            note: entry.note || "",
+            createdAt: entry.createdAt,
+            restoredAt: new Date().toISOString()
+          });
+          sortTodos();
+          persist();
+          renderAllWithFade();
+        });
+      }
+
+      function removeJournal(id, element) {
+        activeConfirmId = null;
+        activeConfirmType = null;
+
+        transitionOut(element, function () {
+          removeById(state.journal, id);
+          persist();
+          renderAllWithFade();
+        });
+      }
+
+      function transitionOut(element, callback) {
+        element.classList.add("is-exiting");
+        window.setTimeout(callback, EXIT_DELAY);
+      }
+
+      function renderAllWithFade() {
+        if (activeAnimationTimer) {
+          clearTimeout(activeAnimationTimer);
+        }
+
+        todoList.classList.add("is-transitioning");
+        journalList.classList.add("is-transitioning");
+
+        activeAnimationTimer = window.setTimeout(function () {
+          renderAll();
+          requestAnimationFrame(function () {
+            todoList.classList.remove("is-transitioning");
+            journalList.classList.remove("is-transitioning");
+          });
+        }, 140);
+      }
+
+      function updateTodoNote(id, note) {
+        var todo = findById(state.todos, id);
+        if (!todo) {
+          return;
+        }
+        todo.note = note;
+        persist();
+      }
+
+      function getFilteredTodos() {
+        if (!uiState.selectedDate) {
+          return state.todos.slice();
+        }
+
+        return state.todos.filter(function (todo) {
+          return formatDate(todo.createdAt) === uiState.selectedDate;
+        });
+      }
+
+      function getFilteredJournal() {
+        if (!uiState.selectedDate) {
+          return state.journal.slice();
+        }
+
+        return state.journal.filter(function (entry) {
+          return formatDate(entry.completedAt) === uiState.selectedDate;
+        });
+      }
+
+      function groupJournalByDate(entries) {
+        var groups = [];
+        var map = {};
+
+        entries.forEach(function (entry) {
+          var key = formatDate(entry.completedAt);
+          if (!map[key]) {
+            map[key] = {
+              dateKey: key,
+              items: []
+            };
+            groups.push(map[key]);
+          }
+          map[key].items.push(entry);
+        });
+
+        groups.sort(function (a, b) {
+          return new Date(b.items[0].completedAt).getTime() - new Date(a.items[0].completedAt).getTime();
+        });
+
+        groups.forEach(function (group) {
+          group.items.sort(function (a, b) {
+            return new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime();
+          });
+        });
+
+        return groups;
+      }
+
+      function getDataDateSet() {
+        var set = {};
+        state.todos.forEach(function (todo) {
+          set[formatDate(todo.createdAt)] = true;
+        });
+        state.journal.forEach(function (entry) {
+          set[formatDate(entry.completedAt)] = true;
+        });
+        return set;
+      }
+
+      function getCalendarDays(monthStart) {
+        var start = new Date(monthStart.getFullYear(), monthStart.getMonth(), 1);
+        var end = new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0);
+        var startWeekday = (start.getDay() + 6) % 7;
+        var total = Math.ceil((startWeekday + end.getDate()) / 7) * 7;
+        var gridStart = new Date(start);
+        gridStart.setDate(start.getDate() - startWeekday);
+        var days = [];
+
+        for (var i = 0; i < total; i += 1) {
+          var date = new Date(gridStart);
+          date.setDate(gridStart.getDate() + i);
+          days.push({
+            dateKey: formatDate(date),
+            dayNumber: date.getDate(),
+            isCurrentMonth: date.getMonth() === monthStart.getMonth()
+          });
+        }
+
+        return days;
+      }
+
+      function addMonths(value, offset) {
+        var date = toDate(value);
+        return new Date(date.getFullYear(), date.getMonth() + offset, 1);
+      }
+
+      function startOfMonth(value) {
+        var date = toDate(value);
+        return new Date(date.getFullYear(), date.getMonth(), 1);
+      }
+
+      function findById(list, id) {
+        return list.find(function (item) {
+          return item.id === id;
+        });
+      }
+
+      function removeById(list, id) {
+        var index = list.findIndex(function (item) {
+          return item.id === id;
+        });
+        if (index !== -1) {
+          list.splice(index, 1);
+        }
+      }
+
+      function createEmpty(text) {
+        var empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent = text;
+        return empty;
+      }
+
+      function getTodoSortTime(todo) {
+        return todo.restoredAt || todo.createdAt;
+      }
+
+      function stopBubble(event) {
+        event.stopPropagation();
+      }
+
+      function pad(value) {
+        return String(value).padStart(2, "0");
+      }
+
+      function toDate(value) {
+        return value instanceof Date ? value : new Date(value);
+      }
+
+      function formatDate(value) {
+        var date = toDate(value);
+        return date.getFullYear() + "-" + pad(date.getMonth() + 1) + "-" + pad(date.getDate());
+      }
+
+      function formatDateTime(value) {
+        var date = toDate(value);
+        return formatDate(date) + " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+      }
+
+      function formatDateLabel(dateString) {
+        var parts = dateString.split("-");
+        return parts[0] + "年" + parts[1] + "月" + parts[2] + "日";
+      }
+
+      function formatMonthLabel(value) {
+        var date = toDate(value);
+        return date.getFullYear() + "年" + pad(date.getMonth() + 1) + "月";
+      }
+
+      function renderIcon(type) {
+        if (type === "trash") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16"></path><path d="M9 7V5h6v2"></path><path d="M8 7l1 11h6l1-11"></path><path d="M10 11v4"></path><path d="M14 11v4"></path></svg>';
+        }
+        if (type === "undo") {
+          return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 8H5v-4"></path><path d="M5 8c1.8-2.7 4.5-4 8-4 4.4 0 8 3.6 8 8s-3.6 8-8 8c-2.4 0-4.7-.9-6.3-2.6"></path></svg>';
+        }
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v10H9l-4 4z"></path><path d="M8 9h8"></path><path d="M8 12h5"></path></svg>';
+      }
+    })();
+  </script>
+</body>
+</html>
