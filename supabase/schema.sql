@@ -65,7 +65,7 @@ alter table public.anniversaries enable row level security;
 revoke all on table public.app_settings from anon, authenticated;
 revoke all on table public.todos from anon, authenticated;
 revoke all on table public.anniversaries from anon, authenticated;
-grant select (person_one, person_two) on table public.app_settings to authenticated;
+grant select (id, person_one, person_two) on table public.app_settings to authenticated;
 grant update (person_one, person_two) on table public.app_settings to authenticated;
 grant select, insert, delete on table public.todos to authenticated;
 grant update (text, note, status, restored_at, completed_at) on table public.todos to authenticated;
