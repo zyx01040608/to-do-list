@@ -23,6 +23,17 @@ Publishable/anon key 可以出现在网页源代码中。不要把 `secret` 或 
 
 页面只显示一个共享密码输入框。两个人使用同一个隐藏账号和密码登录，不需要邮箱链接，也没有公开注册入口。数据库 RLS 只允许这个隐藏账号访问数据。Supabase 的标识邮箱仍需同时填写到 `config.js` 和 `app_settings.login_email`，它不是秘密，但不会出现在登录界面。
 
+如果登录后显示“这个账号没有访问权限”，在 Supabase `SQL Editor` 执行下面的修复语句，然后退出网页重新登录：
+
+```sql
+grant select (id, person_one, person_two)
+on public.app_settings to authenticated;
+
+update public.app_settings
+set login_email = 'haoni9276@gmail.com', person_one = 'zyx', person_two = 'nzh'
+where id = true;
+```
+
 ## 本地数据迁移
 
 每台设备第一次成功登录云端后，会把该浏览器现有的待办、完成回忆和纪念日合并上传一次。迁移成功会在本地记录 `todoReflectionCloudMigrationV2`，避免重复导入。纪念日从“纪念日”模块的新建按钮添加，会同步到两台设备。
