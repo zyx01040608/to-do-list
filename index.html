@@ -84,7 +84,7 @@
     .visual-scribble.second { top: auto; right: auto; left: 28px; bottom: 42px; color: var(--honey); font-size: 18px; transform: rotate(-16deg); }
     .couple-figures { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 15px; transform: translateY(12px); }
     .person { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-    .person-bubble { width: 78px; height: 78px; display: inline-flex; align-items: center; justify-content: center; border: 7px solid var(--panel); border-radius: 50%; color: #fff; font-size: 23px; font-weight: 700; box-shadow: 0 12px 24px rgba(142, 89, 82, .15); }
+    .person-bubble { width: auto; min-width: 78px; max-width: 150px; height: 78px; padding: 0 15px; display: inline-flex; align-items: center; justify-content: center; border: 7px solid var(--panel); border-radius: 50px; color: #fff; font-size: 21px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; box-shadow: 0 12px 24px rgba(142, 89, 82, .15); }
     .person:first-child .person-bubble { background: var(--peach); transform: rotate(-7deg); }
     .person:last-child .person-bubble { background: var(--sage); transform: rotate(7deg); }
     .heart-connector { width: 36px; height: 36px; margin-bottom: 50px; color: var(--accent); display: inline-flex; align-items: center; justify-content: center; }
@@ -296,7 +296,7 @@
     (function () {
       var STORAGE_KEY = "todoReflectionSingleFileApp";
       var EXIT_DELAY = 250;
-      var DEFAULT_STATE = { theme: "pink", anniversaries: [], todos: [], journal: [] };
+      var DEFAULT_STATE = { theme: "pink", anniversaries: [], pendingAnniversaryIds: [], todos: [], journal: [] };
       var state = loadState();
       var cloud = { client: null, user: null, channel: null, enabled: false, loading: false };
       var uiState = { selectedDate: null };
@@ -347,9 +347,9 @@
       anniversaryModal.addEventListener("click", function (event) { if (event.target === anniversaryModal) closeAnniversaryModal(); });
       anniversaryForm.addEventListener("submit", saveAnniversary);
 
-      function loadState() { try { var raw = localStorage.getItem(STORAGE_KEY); if (!raw) return cloneDefaultState(); var parsed = JSON.parse(raw); var legacy = isDateKey(parsed.anniversaryDate) ? [{ id: createId(), title: "在一起", date: parsed.anniversaryDate }] : []; return { theme: parsed.theme === "blue" ? "blue" : "pink", anniversaries: Array.isArray(parsed.anniversaries) ? parsed.anniversaries : legacy, todos: Array.isArray(parsed.todos) ? parsed.todos : [], journal: Array.isArray(parsed.journal) ? parsed.journal : [] }; } catch (error) { return cloneDefaultState(); } }
-      function cloneDefaultState() { return { theme: DEFAULT_STATE.theme, anniversaries: [], todos: [], journal: [] }; }
-      function normalizeState() { state.anniversaries = state.anniversaries.map(function (item) { return { id: item.id || createId(), title: typeof item.title === "string" ? item.title.trim() : "", date: isDateKey(item.date || item.anniversary_date) ? (item.date || item.anniversary_date) : null }; }).filter(function (item) { return item.title && item.date; }); state.todos = state.todos.map(function (todo) { return { id: todo.id || createId(), text: typeof todo.text === "string" ? todo.text : "", note: typeof todo.note === "string" ? todo.note : "", createdAt: isValidDate(todo.createdAt) ? todo.createdAt : new Date().toISOString(), restoredAt: isValidDate(todo.restoredAt) ? todo.restoredAt : null }; }).filter(function (todo) { return todo.text.trim(); }); state.journal = state.journal.map(function (entry) { return { id: entry.id || createId(), text: typeof entry.text === "string" ? entry.text : "", note: typeof entry.note === "string" ? entry.note : "", createdAt: isValidDate(entry.createdAt) ? entry.createdAt : new Date().toISOString(), completedAt: isValidDate(entry.completedAt) ? entry.completedAt : new Date().toISOString() }; }).filter(function (entry) { return entry.text.trim(); }); }
+      function loadState() { try { var raw = localStorage.getItem(STORAGE_KEY); if (!raw) return cloneDefaultState(); var parsed = JSON.parse(raw); var legacy = isDateKey(parsed.anniversaryDate) ? [{ id: createId(), title: "在一起", date: parsed.anniversaryDate }] : []; return { theme: parsed.theme === "blue" ? "blue" : "pink", anniversaries: Array.isArray(parsed.anniversaries) ? parsed.anniversaries : legacy, pendingAnniversaryIds: Array.isArray(parsed.pendingAnniversaryIds) ? parsed.pendingAnniversaryIds : [], todos: Array.isArray(parsed.todos) ? parsed.todos : [], journal: Array.isArray(parsed.journal) ? parsed.journal : [] }; } catch (error) { return cloneDefaultState(); } }
+      function cloneDefaultState() { return { theme: DEFAULT_STATE.theme, anniversaries: [], pendingAnniversaryIds: [], todos: [], journal: [] }; }
+      function normalizeState() { state.anniversaries = state.anniversaries.map(function (item) { return { id: item.id || createId(), title: typeof item.title === "string" ? item.title.trim() : "", date: isDateKey(item.date || item.anniversary_date) ? (item.date || item.anniversary_date) : null }; }).filter(function (item) { return item.title && item.date; }); state.pendingAnniversaryIds = Array.isArray(state.pendingAnniversaryIds) ? state.pendingAnniversaryIds.filter(function (id) { return !!findById(state.anniversaries, id); }) : []; state.todos = state.todos.map(function (todo) { return { id: todo.id || createId(), text: typeof todo.text === "string" ? todo.text : "", note: typeof todo.note === "string" ? todo.note : "", createdAt: isValidDate(todo.createdAt) ? todo.createdAt : new Date().toISOString(), restoredAt: isValidDate(todo.restoredAt) ? todo.restoredAt : null }; }).filter(function (todo) { return todo.text.trim(); }); state.journal = state.journal.map(function (entry) { return { id: entry.id || createId(), text: typeof entry.text === "string" ? entry.text : "", note: typeof entry.note === "string" ? entry.note : "", createdAt: isValidDate(entry.createdAt) ? entry.createdAt : new Date().toISOString(), completedAt: isValidDate(entry.completedAt) ? entry.completedAt : new Date().toISOString() }; }).filter(function (entry) { return entry.text.trim(); }); }
       function persist() { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
       function applyTheme(theme) { document.body.classList.toggle("theme-blue", theme === "blue"); }
       function startCloud() {
@@ -417,15 +417,23 @@
             cloud.client.auth.signOut();
             return false;
           }
-          document.getElementById("personOne").textContent = settingsResult.data.person_one.slice(0, 2);
-          document.getElementById("personTwo").textContent = settingsResult.data.person_two.slice(0, 2);
+          document.getElementById("personOne").textContent = settingsResult.data.person_one || "你";
+          document.getElementById("personTwo").textContent = settingsResult.data.person_two || "TA";
           return Promise.all([cloud.client.from("todos").select("id,text,note,status,created_at,restored_at,completed_at").order("updated_at", { ascending: false }), cloud.client.from("anniversaries").select("id,title,anniversary_date").order("anniversary_date", { ascending: true })]).then(function (results) {
             var todoResult = results[0]; var anniversaryResult = results[1];
             if (todoResult.error || anniversaryResult.error) { setSyncState("error"); return false; }
             state.todos = todoResult.data.filter(function (row) { return row.status === "pending"; }).map(cloudRowToTodo);
             state.journal = todoResult.data.filter(function (row) { return row.status === "completed"; }).map(cloudRowToJournal);
-            state.anniversaries = anniversaryResult.data.map(cloudRowToAnniversary);
-            persist(); renderAll(); setSyncState("online"); return true;
+            var remoteAnniversaries = anniversaryResult.data.map(cloudRowToAnniversary);
+            var remoteIds = {}; remoteAnniversaries.forEach(function (item) { remoteIds[item.id] = true; });
+            var localOnly = state.anniversaries.filter(function (item) { return !remoteIds[item.id]; });
+            var pendingIds = state.pendingAnniversaryIds || [];
+            if (remoteAnniversaries.length === 0) localOnly = state.anniversaries.slice();
+            else localOnly = localOnly.filter(function (item) { return pendingIds.indexOf(item.id) !== -1; });
+            state.anniversaries = remoteAnniversaries.concat(localOnly);
+            persist(); renderAll();
+            if (localOnly.length) cloudWrite(cloud.client.from("anniversaries").insert(localOnly.map(anniversaryToCloudRow)), function () { localOnly.forEach(function (item) { removePendingAnniversary(item.id); }); persist(); });
+            setSyncState("online"); return true;
           });
         }).catch(function () { setSyncState("error"); return false; });
       }
@@ -454,7 +462,7 @@
       function todoToCloudRow(todo) { return { id: todo.id, text: todo.text, note: todo.note || "", status: "pending", created_by: cloud.user.id, created_at: todo.createdAt, restored_at: todo.restoredAt || null, completed_at: null }; }
       function journalToCloudRow(entry) { return { id: entry.id, text: entry.text, note: entry.note || "", status: "completed", created_by: cloud.user.id, created_at: entry.createdAt, restored_at: null, completed_at: entry.completedAt }; }
       function anniversaryToCloudRow(item) { return { id: item.id, title: item.title, anniversary_date: item.date }; }
-      function cloudWrite(promise) { if (!cloud.enabled || !cloud.user) return; promise.then(function (result) { if (result && result.error) { setSyncState("error"); showToast("云端同步失败"); } }).catch(function () { setSyncState("error"); showToast("云端同步失败"); }); }
+      function cloudWrite(promise, onSuccess) { if (!cloud.enabled || !cloud.user) return; promise.then(function (result) { if (result && result.error) { setSyncState("error"); showToast("云端同步失败"); } else if (onSuccess) onSuccess(); }).catch(function () { setSyncState("error"); showToast("云端同步失败"); }); }
       function showToast(message) { toast.textContent = message; toast.classList.add("is-open"); if (toastTimer) clearTimeout(toastTimer); toastTimer = window.setTimeout(function () { toast.classList.remove("is-open"); }, 2600); }
       function renderAll() { sortTodos(); sortJournal(); sortAnniversaries(); renderHeader(); renderAnniversaryList(); renderDateFilter(); renderTodos(); renderJournal(); }
       function renderHeader() { var allTodos = state.todos.length; var todayKey = formatDate(new Date()); var completedToday = state.journal.filter(function (entry) { return formatDate(entry.completedAt) === todayKey; }).length; var createdToday = state.todos.filter(function (todo) { return formatDate(getTodoSortTime(todo)) === todayKey; }).length; var totalToday = completedToday + createdToday; var percent = totalToday ? Math.round((completedToday / totalToday) * 100) : 0; progressBar.style.width = percent + "%"; todoCount.textContent = allTodos; completedCount.textContent = state.journal.length; }
@@ -474,8 +482,9 @@
       function getDaysTogether(dateKey) { var start = new Date(dateKey + "T00:00:00"); var today = new Date(); var localToday = new Date(today.getFullYear(), today.getMonth(), today.getDate()); return Math.max(0, Math.floor((localToday.getTime() - start.getTime()) / 86400000) + 1); }
       function openAnniversaryModal(item) { editingAnniversaryId = item ? item.id : null; anniversaryTitleInput.value = item ? item.title : ""; anniversaryDateInput.value = item ? item.date : ""; document.getElementById("anniversaryDialogTitle").textContent = item ? "编辑纪念日" : "新建纪念日"; anniversaryModal.classList.add("is-open"); window.setTimeout(function () { anniversaryTitleInput.focus(); }, 0); }
       function closeAnniversaryModal() { anniversaryModal.classList.remove("is-open"); editingAnniversaryId = null; anniversaryForm.reset(); }
-      function saveAnniversary(event) { event.preventDefault(); var title = anniversaryTitleInput.value.trim(); var dateKey = anniversaryDateInput.value; if (!title || !isDateKey(dateKey)) return; var existingId = editingAnniversaryId; var item = { id: existingId || createId(), title: title, date: dateKey }; if (existingId) { var existing = findById(state.anniversaries, existingId); if (existing) { existing.title = title; existing.date = dateKey; } } else state.anniversaries.push(item); persist(); renderAll(); closeAnniversaryModal(); if (cloud.client && cloud.user) cloudWrite(existingId ? cloud.client.from("anniversaries").update({ title: title, anniversary_date: dateKey }).eq("id", item.id) : cloud.client.from("anniversaries").insert(anniversaryToCloudRow(item))); }
-      function removeAnniversary(id) { var item = findById(state.anniversaries, id); if (!item) return; activeConfirmId = null; activeConfirmType = null; removeById(state.anniversaries, id); persist(); renderAll(); if (cloud.client && cloud.user) cloudWrite(cloud.client.from("anniversaries").delete().eq("id", id)); }
+      function saveAnniversary(event) { event.preventDefault(); var title = anniversaryTitleInput.value.trim(); var dateKey = anniversaryDateInput.value; if (!title || !isDateKey(dateKey)) return; var existingId = editingAnniversaryId; var item = { id: existingId || createId(), title: title, date: dateKey }; if (existingId) { var existing = findById(state.anniversaries, existingId); if (existing) { existing.title = title; existing.date = dateKey; } } else state.anniversaries.push(item); if (!existingId && state.pendingAnniversaryIds.indexOf(item.id) === -1) state.pendingAnniversaryIds.push(item.id); persist(); renderAll(); closeAnniversaryModal(); if (cloud.client && cloud.user) cloudWrite(existingId ? cloud.client.from("anniversaries").update({ title: title, anniversary_date: dateKey }).eq("id", item.id) : cloud.client.from("anniversaries").insert(anniversaryToCloudRow(item)), function () { removePendingAnniversary(item.id); persist(); }); }
+      function removeAnniversary(id) { var item = findById(state.anniversaries, id); if (!item) return; activeConfirmId = null; activeConfirmType = null; removeById(state.anniversaries, id); removePendingAnniversary(id); persist(); renderAll(); if (cloud.client && cloud.user) cloudWrite(cloud.client.from("anniversaries").delete().eq("id", id)); }
+      function removePendingAnniversary(id) { state.pendingAnniversaryIds = (state.pendingAnniversaryIds || []).filter(function (pendingId) { return pendingId !== id; }); }
       function isDateKey(value) { return typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(new Date(value + "T00:00:00").getTime()); }
       function getFilteredTodos() { return uiState.selectedDate ? state.todos.filter(function (todo) { return formatDate(todo.createdAt) === uiState.selectedDate; }) : state.todos.slice(); }
       function getFilteredJournal() { return uiState.selectedDate ? state.journal.filter(function (entry) { return formatDate(entry.completedAt) === uiState.selectedDate; }) : state.journal.slice(); }
